@@ -26,8 +26,30 @@ def get_data():
 
     return X_train, X_test, Y_train, Y_test
 
+class PyTorchModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x: torch.Tensor):
+        raise NotImplementedError()
+
+class BostonModel(PyTorchModel):
+    def __init__(self, n_hidden=13):
+        super().__init__()
+        self.f1 = torch.nn.Linear(13, n_hidden)
+        self.f2 = torch.nn.Linear(n_hidden, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        assert x.shape[1] == 13
+
+        x = self.f1(x)
+        x = torch.sigmoid(x)
+        x = self.f2(x)
+        return x
+
 def main():
     X_train, X_test, Y_train, Y_test = get_data()
+    nn_model = BostonModel()
 
 if __name__ == '__main__':
     main()
