@@ -39,15 +39,21 @@ class PyTorchModel(torch.nn.Module):
         raise NotImplementedError()
 
 class BostonModel(PyTorchModel):
-    def __init__(self, n_hidden=13):
+    def __init__(self, n_hidden=13, dropout=1.0):
         super().__init__()
         self.f1 = torch.nn.Linear(13, n_hidden)
         self.f2 = torch.nn.Linear(n_hidden, 1)
+        if dropout < 1.0:
+            self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         assert x.shape[1] == 13
 
         x = self.f1(x)
+
+        if hasattr(self, "dropout"):
+            x = self.dropout(x)
+
         x = torch.sigmoid(x)
         x = self.f2(x)
         return x
@@ -90,7 +96,7 @@ class PyTorchTrainer():
 
 def main():
     X_train, X_test, Y_train, Y_test = get_data()
-    nn_model = BostonModel()
+    nn_model = BostonModel(dropout=0.1)
     #optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.001)
     optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.01, momentum=0.25)
     criterion = torch.nn.MSELoss()
