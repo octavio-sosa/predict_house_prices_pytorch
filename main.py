@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 
 import numpy as np
 import torch
+from typing import Tuple
 
 torch.manual_seed(20201129)
 
@@ -26,6 +27,10 @@ def get_data():
 
     return X_train, X_test, Y_train, Y_test
 
+def permute_data(X: torch.Tensor, Y: torch.Tensor, seed=1) -> Tuple[torch.Tensor]:
+    perm = torch.randperm(X.shape[0])
+    return X[perm], Y[perm]
+
 class PyTorchModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -47,9 +52,49 @@ class BostonModel(PyTorchModel):
         x = self.f2(x)
         return x
 
+class PyTorchTrainer():
+    def __init__(self, model: PyTorchModel, optim: torch.optim.Optimizer, criterion: torch.nn.modules.loss._Loss):
+        self.model = model
+        self.optim = optim
+        self.loss = criterion
+        self._check_optim_net_aligned()
+
+    def _check_optim_net_aligned(self):
+        assert self.optim.param_groups[0]['params'] == list(self.model.parameters()) 
+
+    def _generate_batches(self, X: torch.Tensor, Y: torch.Tensor, size=32) -> Tuple[torch.Tensor]:
+        N = X.shape[0]
+        for i in range(0, N, size):
+            X_batch, Y_batch = X[i:i+size], Y[i:i+size]
+            yield X_batch, Y_batch
+
+    def fit(self, X_train: torch.tensor, Y_train: torch.Tensor,
+            X_test: torch.Tensor, Y_test: torch.Tensor,
+            epochs=100, eval_every=10, batch_size=32):
+
+        for e in range(epochs):
+            X_train, Y_train = permute_data(X_train, Y_train)
+            batch_generator = self._generate_batches(X_train, Y_train, batch_size)
+
+            for i, (X_batch, Y_batch) in enumerate(batch_generator):
+                self.optim.zero_grad() #reset gradients
+                output = self.model(X_batch)
+                loss = self.loss(output, Y_batch)
+                loss.backward() #back-propagation
+                self.optim.step() #update parameters
+
+            if (e+1) % eval_every == 0:
+                output = self.model(X_test)
+                loss = self.loss(output, Y_test)
+                print(e+1, loss)
+
 def main():
     X_train, X_test, Y_train, Y_test = get_data()
     nn_model = BostonModel()
+    optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.001)
+    criterion = torch.nn.MSELoss()
+    trainer = PyTorchTrainer(nn_model, optimizer, criterion)
+    trainer.fit(X_train, Y_train, X_test, Y_test, epochs=100, eval_every=10)
 
 if __name__ == '__main__':
     main()
