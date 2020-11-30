@@ -91,10 +91,11 @@ class PyTorchTrainer():
 def main():
     X_train, X_test, Y_train, Y_test = get_data()
     nn_model = BostonModel()
-    optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.001)
+    #optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.001)
+    optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.01, momentum=0.25)
     criterion = torch.nn.MSELoss()
     trainer = PyTorchTrainer(nn_model, optimizer, criterion)
-    trainer.fit(X_train, Y_train, X_test, Y_test, epochs=100, eval_every=10)
+    trainer.fit(X_train, Y_train, X_test, Y_test, epochs=1000, eval_every=100)
 
 if __name__ == '__main__':
     main()
