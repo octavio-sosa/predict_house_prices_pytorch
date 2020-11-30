@@ -59,9 +59,12 @@ class BostonModel(PyTorchModel):
         return x
 
 class PyTorchTrainer():
-    def __init__(self, model: PyTorchModel, optim: torch.optim.Optimizer, criterion: torch.nn.modules.loss._Loss):
+    def __init__(self, model: PyTorchModel, optim: torch.optim.Optimizer, 
+                 scheduler: torch.optim.lr_scheduler,
+                 criterion: torch.nn.modules.loss._Loss):
         self.model = model
         self.optim = optim
+        self.scheduler = scheduler
         self.loss = criterion
         self._check_optim_net_aligned()
 
@@ -89,6 +92,8 @@ class PyTorchTrainer():
                 loss.backward() #back-propagation
                 self.optim.step() #update parameters
 
+            self.scheduler.step()
+
             if (e+1) % eval_every == 0:
                 output = self.model(X_test)
                 loss = self.loss(output, Y_test)
@@ -99,8 +104,9 @@ def main():
     nn_model = BostonModel(dropout=0.1)
     #optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.001)
     optimizer = torch.optim.SGD(nn_model.parameters(), lr=0.01, momentum=0.25)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1)
     criterion = torch.nn.MSELoss()
-    trainer = PyTorchTrainer(nn_model, optimizer, criterion)
+    trainer = PyTorchTrainer(nn_model, optimizer, scheduler, criterion)
     trainer.fit(X_train, Y_train, X_test, Y_test, epochs=1000, eval_every=100)
 
 if __name__ == '__main__':
